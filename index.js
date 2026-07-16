@@ -7,6 +7,19 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 
+// --- DUMMY WEB SERVER UNTUK AZURE ---
+const http = require('http');
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot FiveM sedang berjalan dengan baik di Azure!');
+});
+
+const port = process.env.PORT || 8080;
+server.listen(port, () => {
+    console.log(`Dummy server mendengarkan ping dari Azure di port ${port}`);
+});
+// ------------------------------------
+
 // --- 1. INITIALIZATION ---
 const serviceAccount = require("./serviceAccountKey.json");
 
