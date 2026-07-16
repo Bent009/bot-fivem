@@ -1,7 +1,7 @@
 const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const { buildLogPage } = require("../utils/logPagination");
 const panelCommand = require("../commands/utility/panel");
-const playerCommand = require("../commands/fivem/player"); // Mendaftarkan command player
+const playerCommand = require("../commands/fivem/player");
 
 // --- 1. KONFIGURASI TEMA & ITEM ---
 const THEME = { 
