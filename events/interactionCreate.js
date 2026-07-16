@@ -1,6 +1,7 @@
 const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const { buildLogPage } = require("../utils/logPagination");
 const panelCommand = require("../commands/utility/panel");
+const playerCommand = require("../commands/player"); // Mendaftarkan command player
 
 // --- 1. KONFIGURASI TEMA & ITEM ---
 const THEME = { 
@@ -34,37 +35,33 @@ module.exports = async (interaction) => {
 
         switch (interaction.customId) {
             case "btn_dashboard":
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const snap = await db.collection("inventory").doc("stok_utama").get();
-    const data = snap.data();
-    
-    const consolidated = {};
-    for (const [key, val] of Object.entries(data)) {
-        // TRIMMING: Membersihkan spasi di awal/akhir kunci
-        // LOWERCASE: Menyeragamkan semua huruf menjadi kecil
-        const cleanKey = key.trim().toLowerCase();
-        
-        // Hanya proses jika val adalah angka valid
-        const numberVal = Number(val);
-        if (!isNaN(numberVal)) {
-            consolidated[cleanKey] = (consolidated[cleanKey] || 0) + numberVal;
-        }
-    }
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                const snap = await db.collection("inventory").doc("stok_utama").get();
+                const data = snap.data();
+                
+                const consolidated = {};
+                for (const [key, val] of Object.entries(data)) {
+                    const cleanKey = key.trim().toLowerCase();
+                    const numberVal = Number(val);
+                    if (!isNaN(numberVal)) {
+                        consolidated[cleanKey] = (consolidated[cleanKey] || 0) + numberVal;
+                    }
+                }
 
-    const fields = Object.entries(consolidated).map(([key, val]) => ({
-        name: itemConfig[key]?.name || key.toUpperCase(), 
-        value: val.toString(), 
-        inline: true
-    }));
+                const fields = Object.entries(consolidated).map(([key, val]) => ({
+                    name: itemConfig[key]?.name || key.toUpperCase(), 
+                    value: val.toString(), 
+                    inline: true
+                }));
 
-    const embed = new EmbedBuilder()
-        .setTitle("📦 STOK INVENTARIS TON")
-        .setColor(THEME.colors.dashboard)
-        .addFields(fields)
-        .setTimestamp()
-        .setFooter({ text: THEME.footer });
+                const embed = new EmbedBuilder()
+                    .setTitle("📦 STOK INVENTARIS TON")
+                    .setColor(THEME.colors.dashboard)
+                    .addFields(fields)
+                    .setTimestamp()
+                    .setFooter({ text: THEME.footer });
 
-    return interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
+                return interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
             case "btn_harga":
                 await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -72,25 +69,17 @@ module.exports = async (interaction) => {
                 const dataHarga = snapHarga.data();
                 
                 const excludedItems = ['uangmerah', 'uangkas'];
-                
-                // 1. KONSOLIDASI: Menggabungkan data unik
                 const uniqueItems = {};
                 for (const [key, val] of Object.entries(dataHarga)) {
                     const cleanKey = key.trim().toLowerCase();
-                    
-                    // Filter: Lewati jika key ada di daftar exclude
                     if (excludedItems.includes(cleanKey)) continue;
-
-                    // Simpan ke objek unik. Jika key sudah ada, dia akan menimpa (mencegah duplikat)
                     uniqueItems[cleanKey] = val;
                 }
 
-                // 2. MEMBANGUN TEKS: Dari objek yang sudah unik
                 let desc = "💰 **KATALOG HARGA TERKINI**\n\n";
                 for (const [key, val] of Object.entries(uniqueItems)) {
                     const price = val && typeof val === 'object' ? (val.price || 0) : val;
                     const config = itemConfig[key] || { name: key.toUpperCase(), emoji: '📦' };
-                    
                     desc += `${config.emoji || '📦'} **${config.name}**: $${price}\n`;
                 }
 
@@ -155,6 +144,29 @@ module.exports = async (interaction) => {
         }
     }
 
+    // --- 4. HANDLE SLASH COMMANDS ---
     if (!interaction.isChatInputCommand()) return;
-    if (interaction.commandName === "panel") return panelCommand.execute(interaction);
+    
+    try {
+        if (interaction.commandName === "panel") {
+            return panelCommand.execute(interaction);
+        } 
+        else if (interaction.commandName === "player") {
+            return playerCommand.execute(interaction);
+        } 
+        // Tambahkan command lain di sini jika ada
+        else {
+            return interaction.reply({ 
+                content: "❌ Command ini belum disambungkan ke sistem handler.", 
+                flags: MessageFlags.Ephemeral 
+            });
+        }
+    } catch (error) {
+        console.error("[COMMAND EXECUTION ERROR]", error);
+        if (interaction.deferred || interaction.replied) {
+            return interaction.editReply({ content: "❌ Terjadi kesalahan fatal saat mengeksekusi command." });
+        } else {
+            return interaction.reply({ content: "❌ Terjadi kesalahan fatal saat mengeksekusi command.", flags: MessageFlags.Ephemeral });
+        }
+    }
 };
