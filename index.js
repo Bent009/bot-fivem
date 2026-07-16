@@ -7,20 +7,7 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 
-// --- DUMMY WEB SERVER UNTUK AZURE ---
-const http = require('http');
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot FiveM sedang berjalan dengan baik di Azure!');
-});
-
-const port = process.env.PORT || 8080;
-server.listen(port, () => {
-    console.log(`Dummy server mendengarkan ping dari Azure di port ${port}`);
-});
-// ------------------------------------
-
-// --- 1. INITIALIZATION ---
+// --- 1. INITIALIZATION FIREBASE ---
 const serviceAccount = require("./serviceAccountKey.json");
 
 admin.initializeApp({
@@ -28,11 +15,18 @@ admin.initializeApp({
 });
 
 const db = getFirestore();
-const app = express();
-app.use(express.json());
-app.use(cors());
 
-// --- 2. BOT CONFIGURATION ---
+// --- 2. EXPRESS WEB SERVER & API (PENGGANTI DUMMY SERVER) ---
+const app = express();
+app.use(cors()); // Membuka gerbang agar website TON bisa mengirim data
+app.use(express.json());
+
+// Menjawab ping dari Azure agar container tidak terbunuh
+app.get('/', (req, res) => {
+    res.send('Bot FiveM dan API Server berjalan dengan lancar di Azure!');
+});
+
+// --- 3. BOT CONFIGURATION ---
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -46,7 +40,7 @@ const client = new Client({
 client.db = db;
 client.playersCache = new Map();
 
-// --- 3. EVENT HANDLERS ---
+// --- 4. EVENT HANDLERS ---
 const interactionHandler = require("./events/interactionCreate");
 
 client.once("clientReady", (c) => {
@@ -68,7 +62,7 @@ client.on("messageCreate", async (message) => {
     await message.reply({ embeds: [embed] });
 });
 
-// --- 4. EXPRESS API (Inventory Report) ---
+// --- 5. EXPRESS API (Inventory Report) ---
 app.post("/api/report", async (req, res) => {
     try {
         const { channelId, embedData } = req.body;
@@ -80,6 +74,11 @@ app.post("/api/report", async (req, res) => {
             .addFields(embedData.fields || [])
             .setTimestamp();
 
+        // Mengakomodasi jika ada deskripsi tambahan dari frontend
+        if (embedData.description) {
+            embed.setDescription(embedData.description);
+        }
+
         await channel.send({ embeds: [embed] });
         res.status(200).json({ success: true });
     } catch (err) {
@@ -88,11 +87,13 @@ app.post("/api/report", async (req, res) => {
     }
 });
 
-app.listen(3000, () => {
-    console.log("[API] 🚀 Server berjalan di http://localhost:3000");
+// Menjalankan server Express di port Azure (menyatukan fungsi API & Dummy Server)
+const port = process.env.PORT || 8080;
+app.listen(port, () => {
+    console.log(`[API] 🚀 Server API & Azure Ping mendengarkan di port ${port}`);
 });
 
-// --- 5. ERROR HANDLING (Pro Level) ---
+// --- 6. ERROR HANDLING (Pro Level) ---
 process.on("unhandledRejection", (reason, promise) => {
     console.error("[CRITICAL] Unhandled Rejection at:", promise, "reason:", reason);
 });
@@ -101,5 +102,5 @@ process.on("uncaughtException", (err) => {
     console.error("[CRITICAL] Uncaught Exception:", err);
 });
 
-// --- 6. START BOT ---
+// --- 7. START BOT ---
 client.login(process.env.TOKEN);
