@@ -1,7 +1,17 @@
 const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const { buildLogPage } = require("../utils/logPagination");
+// --- IMPORT SEMUA COMMAND KAMU DI SINI ---
+// Sesuaikan path "../commands/..." dengan lokasi file aslinya di folder kamu
 const panelCommand = require("../commands/utility/panel");
 const playerCommand = require("../commands/fivem/player");
+const addserverCommand = require("../commands/fivem/addserver");
+const removeserverCommand = require("../commands/fivem/removeserver");
+const serverlistCommand = require("../commands/fivem/serverlist");
+const serverinfoCommand = require("../commands/utility/serverinfo");
+const avatarCommand = require("../commands/utility/avatar");
+const helpCommand = require("../commands/utility/help");
+const pingCommand = require("../commands/utility/ping");
+const setpanelCommand = require("../commands/utility/setpanel");
 
 // --- 1. KONFIGURASI TEMA & ITEM ---
 const THEME = { 
@@ -42,6 +52,8 @@ module.exports = async (interaction) => {
                 const consolidated = {};
                 for (const [key, val] of Object.entries(data)) {
                     const cleanKey = key.trim().toLowerCase();
+                    if (!cleanKey || cleanKey === "undefined") continue;
+                    
                     const numberVal = Number(val);
                     if (!isNaN(numberVal)) {
                         consolidated[cleanKey] = (consolidated[cleanKey] || 0) + numberVal;
@@ -70,6 +82,7 @@ module.exports = async (interaction) => {
                 
                 const excludedItems = ['uangmerah', 'uangkas'];
                 const uniqueItems = {};
+                
                 for (const [key, val] of Object.entries(dataHarga)) {
                     const cleanKey = key.trim().toLowerCase();
                     if (excludedItems.includes(cleanKey)) continue;
@@ -146,27 +159,34 @@ module.exports = async (interaction) => {
 
     // --- 4. HANDLE SLASH COMMANDS ---
     if (!interaction.isChatInputCommand()) return;
-    
+
     try {
-        if (interaction.commandName === "panel") {
-            return panelCommand.execute(interaction);
-        } 
-        else if (interaction.commandName === "player") {
-            return playerCommand.execute(interaction);
-        } 
-        // Tambahkan command lain di sini jika ada
+        const cmd = interaction.commandName;
+
+        if (cmd === "panel") return panelCommand.execute(interaction);
+        else if (cmd === "player") return playerCommand.execute(interaction);
+        else if (cmd === "addserver") return addserverCommand.execute(interaction);
+        else if (cmd === "removeserver") return removeserverCommand.execute(interaction);
+        else if (cmd === "serverlist") return serverlistCommand.execute(interaction);
+        else if (cmd === "serverinfo") return serverinfoCommand.execute(interaction);
+        else if (cmd === "avatar") return avatarCommand.execute(interaction);
+        else if (cmd === "help") return helpCommand.execute(interaction);
+        else if (cmd === "ping") return pingCommand.execute(interaction);
+        else if (cmd === "setpanel") return setpanelCommand.execute(interaction);
         else {
             return interaction.reply({ 
-                content: "❌ Command ini belum disambungkan ke sistem handler.", 
+                content: "❌ Command ini belum disambungkan ke sistem handler di interactionCreate.", 
                 flags: MessageFlags.Ephemeral 
             });
         }
     } catch (error) {
         console.error("[COMMAND EXECUTION ERROR]", error);
+        const replyPayload = { content: "❌ Terjadi kesalahan saat mengeksekusi command.", flags: MessageFlags.Ephemeral };
+        
         if (interaction.deferred || interaction.replied) {
-            return interaction.editReply({ content: "❌ Terjadi kesalahan fatal saat mengeksekusi command." });
+            return interaction.editReply(replyPayload);
         } else {
-            return interaction.reply({ content: "❌ Terjadi kesalahan fatal saat mengeksekusi command.", flags: MessageFlags.Ephemeral });
+            return interaction.reply(replyPayload);
         }
     }
 };

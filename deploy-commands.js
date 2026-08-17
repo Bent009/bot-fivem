@@ -24,6 +24,8 @@ const commands = [
     
     // Command Panel Baru
     new SlashCommandBuilder().setName("panel").setDescription("Menampilkan panel kontrol interaktif ekosistem TON"),
+
+    new SlashCommandBuilder().setName("setpanel").setDescription("Set panel agar otomatis turun (sticky) setelah ada log masuk").addChannelOption(option => option.setName("target_channel").setDescription("Pilih channel brankas/log").setRequired(true)).addIntegerOption(option => option.setName("waktu").setDescription("Waktu jeda (dalam menit) sebelum panel dikirim ulang").setRequired(true))
 ].map(command => command.toJSON());
 
 // Mengubah sumber token ke process.env.TOKEN
